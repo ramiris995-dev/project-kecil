@@ -1,79 +1,62 @@
-import json
-import os
-from datetime import datetime
+import json, os, datetime
 
-DATA_FILE = "data.json"
+DB = "data/expenses.json"
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
+def load():
+    if not os.path.exists(DB):
         return []
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    return json.load(open(DB))
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+def save(data):
+    json.dump(data, open(DB, "w"), indent=4)
 
-def add_transaction(type_, amount, note):
-    data = load_data()
-    transaction = {
-        "type": type_,
+def add_expense():
+    data = load()
+    amount = float(input("Jumlah (Rp): "))
+    category = input("Kategori (makan, transport, dll): ")
+    note = input("Catatan: ")
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    data.append({
         "amount": amount,
+        "category": category,
         "note": note,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    data.append(transaction)
-    save_data(data)
-    print("Transaksi berhasil ditambahkan!")
+        "date": date
+    })
 
-def view_transactions():
-    data = load_data()
-    if not data:
-        print("Belum ada transaksi.")
+    save(data)
+    print("Pengeluaran ditambahkan.\n")
+
+def summary():
+    data = load()
+    total = sum(d["amount"] for d in data)
+    print(f"Total Pengeluaran: Rp {total:,.0f}\n")
+
+def monthly_report():
+    data = load()
+    month = input("Masukkan bulan (YYYY-MM): ")
+    filtered = [d for d in data if d["date"].startswith(month)]
+
+    if not filtered:
+        print("Tidak ada data.")
         return
 
-    print("\n=== Daftar Transaksi ===")
-    for i, t in enumerate(data, 1):
-        print(f"{i}. {t['date']} | {t['type']} | {t['amount']} | {t['note']}")
-    print()
-
-def calculate_balance():
-    data = load_data()
-    income = sum(t["amount"] for t in data if t["type"] == "income")
-    expense = sum(t["amount"] for t in data if t["type"] == "expense")
-    balance = income - expense
-
-    print(f"\nTotal Pemasukan: {income}")
-    print(f"Total Pengeluaran: {expense}")
-    print(f"Saldo: {balance}\n")
+    print(f"\n=== Laporan {month} ===")
+    for d in filtered:
+        print(f"- {d['date']}: Rp{d['amount']} ({d['category']}) - {d['note']}")
 
 def menu():
     while True:
-        print("\n=== EXPENSE TRACKER ===")
-        print("1. Lihat transaksi")
-        print("2. Tambah pemasukan")
-        print("3. Tambah pengeluaran")
-        print("4. Lihat saldo")
-        print("5. Keluar")
+        print("""
+1. Tambah Pengeluaran
+2. Total Pengeluaran
+3. Laporan Bulanan
+4. Keluar
+""")
+        c = input("Pilih: ")
+        if c == "1": add_expense()
+        elif c == "2": summary()
+        elif c == "3": monthly_report()
+        elif c == "4": break
 
-        choice = input("Pilih menu: ")
-
-        if choice == "1":
-            view_transactions()
-        elif choice == "2":
-            amount = float(input("Jumlah pemasukan: "))
-            note = input("Catatan: ")
-            add_transaction("income", amount, note)
-        elif choice == "3":
-            amount = float(input("Jumlah pengeluaran: "))
-            note = input("Catatan: ")
-            add_transaction("expense", amount, note)
-        elif choice == "4":
-            calculate_balance()
-        elif choice == "5":
-            break
-        else:
-            print("Pilihan tidak valid!")
-
-if __name__ == "__main__":
-    menu()
+menu()
